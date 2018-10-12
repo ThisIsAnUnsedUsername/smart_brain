@@ -5,7 +5,6 @@ import Rank from './component/Rank/Rank';
 import FaceRecognition from './component/FaceRecognition/FaceRecognition';
 import ImageLinkForm from './component/ImageLinkForm/ImageLinkForm';
 import Particles from 'react-particles-js';
-import Clarifai from 'clarifai';
 import './App.css';
 import Signin from './component/Signin/Signin';
 import Register from './component/Register/Register';
@@ -16,23 +15,46 @@ const particlesOptions = {
   }
 };
 
-const app = new Clarifai.App({
-  apiKey: '019ad8a0976145d895e6bb075a3de5e1'
-});
+const initialState = {
+  input: '',
+  imageUrl: '',
+  box: {},
+  route: 'signin',
+  isSignedIn: false,
+  user: {
+    id: '',
+    name: '',
+    email: '',
+    entries: 0,
+    joined: ''
+  }
+};
+
 class App extends Component {
   constructor() {
     super();
-    this.state = {
-      input: '',
-      imageUrl: '',
-      box: {},
-      route: 'signin',
-      isSignedIn: false
-    };
+    this.state = initialState;
   }
 
+  loadUser = data => {
+    this.setState({
+      user: {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        entries: data.entries,
+        joined: data.joined
+      }
+    });
+  };
+
+  // componentDidMount() {
+  //   fetch('http://localhost:3000')
+  //     .then(response => response.json())
+  //     .then(console.log);
+  // }
+
   calculateFaceLocation = data => {
-    console.log(data);
     const clarifaiFace =
       data.outputs[0].data.regions[0].region_info.bounding_box;
     const image = document.getElementById('inputimage');
@@ -60,9 +82,27 @@ class App extends Component {
         imageUrl: this.state.input
       },
       () => {
-        app.models
-          .predict(Clarifai.FACE_DETECT_MODEL, this.state.imageUrl)
+        fetch('http://localhost:3000/imageurl', {
+          method: 'post', //default method is get
+          headers: { 'Content-Type': 'application/json' }, //header define type, property name is string because got symbol
+          body: JSON.stringify({
+            input: this.state.input
+          })
+        })
+          .then(response => response.json())
           .then(response => {
+            fetch('http://localhost:3000/image', {
+              method: 'put', //default method is get
+              headers: { 'Content-Type': 'application/json' }, //header define type, property name is string because got symbol
+              body: JSON.stringify({
+                id: this.state.user.id
+              })
+            })
+              .then(response => response.json())
+              .then(count => {
+                this.setState({ user: { ...this.state.user, entries: count } }); //this will initialize entire user object, removing other info in user object
+              })
+              .catch(console.log);
             this.displayFaceBox(this.calculateFaceLocation(response));
           })
           .catch(err => console.log(err));
@@ -72,7 +112,8 @@ class App extends Component {
 
   onRouteChange = route => {
     if (route === 'signout') {
-      this.setState({ isSignedIn: false });
+      //this.setState({ isSignedIn: false });
+      this.setState(initialState);
     } else if (route === 'home') {
       this.setState({ isSignedIn: true });
     }
@@ -80,7 +121,7 @@ class App extends Component {
   };
 
   render() {
-    const { isSignedIn, imageUrl, route, box } = this.state;
+    const { isSignedIn, imageUrl, route, box, user } = this.state;
     return (
       <div className="App">
         <Particles className="particles" params={particlesOptions} />
@@ -91,7 +132,7 @@ class App extends Component {
         {route === 'home' ? (
           <div>
             <Logo />
-            <Rank />
+            <Rank name={user.name} entries={user.entries} />
             <ImageLinkForm
               onInputChange={this.onInputChange}
               onButtonSubmit={this.onButtonSubmit}
@@ -99,9 +140,12 @@ class App extends Component {
             <FaceRecognition box={box} imageUrl={imageUrl} />
           </div>
         ) : route === 'signin' ? (
-          <Signin onRouteChange={this.onRouteChange} />
+          <Signin onRouteChange={this.onRouteChange} loadUser={this.loadUser} />
         ) : (
-          <Register onRouteChange={this.onRouteChange} />
+          <Register
+            onRouteChange={this.onRouteChange}
+            loadUser={this.loadUser}
+          />
         )}
       </div>
     );
