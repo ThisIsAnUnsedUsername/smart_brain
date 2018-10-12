@@ -82,7 +82,7 @@ class App extends Component {
         imageUrl: this.state.input
       },
       () => {
-        fetch('http://localhost:3000/imageurl', {
+        fetch('https://enigmatic-springs-19215.herokuapp.com/imageurl', {
           method: 'post', //default method is get
           headers: { 'Content-Type': 'application/json' }, //header define type, property name is string because got symbol
           body: JSON.stringify({
@@ -91,7 +91,7 @@ class App extends Component {
         })
           .then(response => response.json())
           .then(response => {
-            fetch('http://localhost:3000/image', {
+            fetch('https://enigmatic-springs-19215.herokuapp.com/image', {
               method: 'put', //default method is get
               headers: { 'Content-Type': 'application/json' }, //header define type, property name is string because got symbol
               body: JSON.stringify({
